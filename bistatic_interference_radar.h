@@ -21,6 +21,9 @@ int bistatic_interference_radar_deinit();  // deinitializes the storage arrays
 int bistatic_interference_radar_config(int, int, int, int, bool); // reconfigure the library with new parameters: sample buffer depth (how many samples to store in the circular buffer, mobile average filter size, variance threshold ( >= 0, how much the interference signal deviates from the norm before triggering a detection result, in dBm), variance integrator limit (how many variance samples we cumulate before evaluating the variance threshold level), finally bolean var set to true -> enable autoregressive filtering (default is false -> disable autoregressive filtering)
 
 
+//  bistatic_interference_radar_process(int sample); is the CORE function that does most of the processing. It receives an RSSI sample, processes and updates the data arrays and returns the detected movement signal.
+//  This function has no dependencies on any hardware or external libraries and can therefore be ported to other systems.
+
 int bistatic_interference_radar_process(int); // receives RSSI signal as parameter, returns the detection level ( < 0 -> error (see ERROR LEVELS section), == 0 -> no detection, > 0 -> detection level in dBm)
 
 
