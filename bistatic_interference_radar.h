@@ -39,13 +39,6 @@ int bistatic_interference_radar_debug_via_serial(int);  // parameter is debug le
 int bistatic_interference_radar_set_debug_level(int);  // parameter is debug level, set it to at least >= 1; the highest the level, the more messages you enjoy
 
 
-//// multistatic version (ESP32 ONLY) // commented and split into a separate library
-
-//int multistatic_interference_radar_init();  // initializes the storage arrays in internal RAM
-
-//int multistatic_interference_radar_init_PSRAM();  // initializes the storage arrays in PSRAM (only for ESP32-CAM modules and ESP32-WROVER modules with the onboard SPI RAM chip)
-
-//int * multistatic_interference_radar(int); // performs the scan internally (parameter: limit to how many signal sources to process) and returns a pointer to int array with the detection levels ordered from the strongest transmitters to the weakest
 
 
 
