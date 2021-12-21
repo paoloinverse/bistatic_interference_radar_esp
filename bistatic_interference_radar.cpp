@@ -8,7 +8,7 @@
 #include "esp_wifi.h"   // IF YOU HAVE AN ESP32, THIS WILL MAKE THE LIBRARY WORK IN MULTISTATIC MODE AND SOFT AP MODE AS LONG AS YOU'VE GOT AT LEAST ONE STATION CONNECTED TO YOUR SoftAP
 
 
-int debugMsg = 3;
+int debugRadarMsg = 3;
 
 
 
@@ -71,10 +71,10 @@ int varianceBufferValid = 0;
 
 
 
+int enableCSVout = 0;
 
 
-
-
+int minimumRSSI = MINIMUM_RSSI;
 
 
 // functions
@@ -179,13 +179,21 @@ int bistatic_interference_radar_process(int sample = 0) { // send the RSSI signa
 
 
   if ((sampleBuffer == NULL) || (mobileAverageBuffer == NULL) || (varianceBuffer == NULL)) {
-    if (debugMsg >= 1) {
-      Serial.print("bistatic_interference_radar_process(): alarm: detected unallocated buffers: did you call bistatic_interference_radar_init() to allocate the buffers?");
+    if (debugRadarMsg >= 1) {
+      Serial.println("bistatic_interference_radar_process(): alarm: detected unallocated buffers: did you call bistatic_interference_radar_init() to allocate the buffers?");
     }
     return RADAR_UNINITIALIZED; // unallocated buffers
   }
 
-
+  if (sample < minimumRSSI) {
+    if (debugRadarMsg >= 1) {
+      Serial.print("bistatic_interference_radar_process(): alarm: signal too low: ");
+      Serial.print(sample);
+      Serial.print(" while minimum RSSI limit is: ");
+      Serial.println(minimumRSSI);
+    }
+    return RADAR_RSSI_TOO_LOW;
+  }
 
   sampleBuffer[sampleBufferIndex] = sample;
   sampleBufferIndex++;
@@ -240,7 +248,7 @@ int bistatic_interference_radar_process(int sample = 0) { // send the RSSI signa
     varianceAR = (varianceIntegral + varianceAR) / 2; // the effect of this filter is to "smooth" down the signal over time, so it's a simple IIR (infinite impulse response) low pass filter. It makes the system less sensitive to noisy signals, especially those with a variance of less than 1dBm.
 
       // diagnostics section
-    if (debugMsg >= 2) {
+    if (debugRadarMsg >= 2) {
       Serial.print("RSSI: "); 
       Serial.print(sample);
       Serial.print(", mobileAverage: "); 
@@ -279,7 +287,7 @@ int bistatic_interference_radar_process(int sample = 0) { // send the RSSI signa
   // final check to determine if the detected variance signal is above the detection threshold, this is only done if enableThreshold > 0 
   if ((variance >= varianceThreshold) && (enableThreshold > 0)) {
     detectionLevel = variance;
-    if (debugMsg >= 1) {
+    if (debugRadarMsg >= 1) {
     	Serial.print("bistatic_interference_radar_process(): detected variance signal above threshold: ");
     	Serial.print(detectionLevel);
     }
@@ -288,7 +296,7 @@ int bistatic_interference_radar_process(int sample = 0) { // send the RSSI signa
   // variance signal under threshold, but otherwise valid?
   if ((variance < varianceThreshold) && (variance >= 0) && (enableThreshold > 0) ) {
     detectionLevel = 0;
-    if (debugMsg >= 2) {
+    if (debugRadarMsg >= 2) {
     	Serial.print("bistatic_interference_radar_process(): variance signal under threshold: ");
     	Serial.print(variance);
     }
@@ -311,7 +319,7 @@ int bistatic_interference_radar() { // request the RSSI level internally, then p
 
   /*  // see, this gets commented because I suspect this only works with ESP32 or ESP8266 devices. ALSO, the wifi is supposed to be already initialized correctly and connected to an external AP
   if (WiFi.getMode() & WIFI_MODE_NULL) {
-    if (debugMsg >= 1) {
+    if (debugRadarMsg >= 1) {
       Serial.println("bistatic_interference_radar(): detected WIFI_MODE_NULL: WIFI not configured: you should configure WIFI in advance and have a working connection before using the bistatic_interference_radar library");
     }
     return WIFI_MODEINVALID;
@@ -323,7 +331,7 @@ int bistatic_interference_radar() { // request the RSSI level internally, then p
   // if the RSSI is zero, then we are most probably not connected to an upstream AP.
 
   if (RSSIlevel == 0) {
-    if (debugMsg >= 1) {
+    if (debugRadarMsg >= 1) {
       Serial.println("bistatic_interference_radar(): WIFI_MODE_STA: RSSI equal to zero detected: wifi connection lost: without a working STA connection the radar is inoperable");
     }
     return RADAR_INOPERABLE; // radar inoperable
@@ -368,7 +376,7 @@ int bistatic_get_rssi_SoftAP_strongestClient() {
   esp_err_t scanRes = esp_wifi_ap_get_sta_list(&stationList);
 
   if (scanRes != ESP_OK) {
-    if (debugMsg >= 1) {
+    if (debugRadarMsg >= 1) {
       Serial.print("bistatic_get_rssi_SoftAP_strongestClient(): scan failed: returning zero RSSI: see file esp_err.h for this error code: ");
       Serial.println(scanRes);
       /*
@@ -392,7 +400,7 @@ int bistatic_get_rssi_SoftAP_strongestClient() {
     return 0; 
   }
 
-  if (debugMsg >= 2) {
+  if (debugRadarMsg >= 2) {
     Serial.print("bistatic_get_rssi_SoftAP_strongestClient(): found clients: ");
     Serial.println(stationList.num);
   }
@@ -407,7 +415,7 @@ int bistatic_get_rssi_SoftAP_strongestClient() {
       currentBSSID = station.mac;
       currentRSSI = station.rssi;
       
-      if (debugMsg >= 3) {
+      if (debugRadarMsg >= 3) {
         Serial.print("bistatic_get_rssi_SoftAP_strongestClient(): processing client: ");
         Serial.println(WiFi.SSID(netItem));     
       }
@@ -417,7 +425,7 @@ int bistatic_get_rssi_SoftAP_strongestClient() {
           strongestClientRSSI = currentRSSI;
 
           memcpy ( strongestClientBSSID, currentBSSID, (sizeof(uint8_t) * 6));
-          if (debugMsg >= 3) {
+          if (debugRadarMsg >= 3) {
             Serial.print("bistatic_get_rssi_SoftAP_strongestClient(): strongest client found with RSSI: ");
             Serial.println(strongestClientRSSI);   
           }
@@ -442,7 +450,7 @@ int bistatic_get_rssi_SoftAP_strongestClient() {
       if (bssidScanOK == 1) {
         currentRSSI = station.rssi;
 
-        if (debugMsg >= 3) {
+        if (debugRadarMsg >= 3) {
           Serial.print("bistatic_get_rssi_SoftAP_strongestClient(): strongest client found with RSSI: ");
             Serial.println(currentRSSI);      
         }
@@ -494,7 +502,7 @@ int bistatic_get_rssi_ScanStrongestAP() {
   } else { // do a single channel active scan, this should be much faster
     scanRes = (int) WiFi.scanNetworks(false, false, false, 200, strongestChannel); //scanNetworks(bool async = false, bool show_hidden = false, bool passive = false, uint32_t max_ms_per_chan = 300, uint8_t channel = 0);
   }
-  if (debugMsg >= 3) {
+  if (debugRadarMsg >= 3) {
     Serial.print("bistatic_get_rssi_ScanStrongestAP(): detected n. AP: ");
     Serial.println(scanRes);
   }
@@ -506,7 +514,7 @@ int bistatic_get_rssi_ScanStrongestAP() {
       currentBSSID = WiFi.BSSID(netItem);
       currentRSSI = WiFi.RSSI(netItem);
       currentChannel = WiFi.channel(netItem);
-      if (debugMsg >= 3) {
+      if (debugRadarMsg >= 3) {
         Serial.print("bistatic_get_rssi_ScanStrongestAP(): processing AP: ");
         Serial.print(WiFi.SSID(netItem));
         Serial.print(" on channel: ");
@@ -520,7 +528,7 @@ int bistatic_get_rssi_ScanStrongestAP() {
           strongestRSSI = currentRSSI;
           strongestChannel = currentChannel;
           memcpy ( strongestBSSID, currentBSSID, (sizeof(uint8_t) * 6));
-          if (debugMsg >= 3) {
+          if (debugRadarMsg >= 3) {
             Serial.print("bistatic_get_rssi_ScanStrongestAP(): strongest AP found on channel: ");
             Serial.print(strongestChannel);   
             Serial.print(" with RSSI: ");
@@ -546,7 +554,7 @@ int bistatic_get_rssi_ScanStrongestAP() {
       if (bssidScanOK == 1) {
         currentRSSI = WiFi.RSSI(netItem);
         currentChannel = WiFi.channel(netItem);
-        if (debugMsg >= 3) {
+        if (debugRadarMsg >= 3) {
           Serial.print("bistatic_get_rssi_ScanStrongestAP(): strongest AP found on channel: ");
           Serial.print(currentChannel); 
           Serial.print(" with SSID: ");
@@ -588,7 +596,7 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
   modeRes = (int) WiFi.getMode();
   
   if (modeRes & WIFI_MODE_NULL) {
-    if (debugMsg >= 1) {
+    if (debugRadarMsg >= 1) {
       Serial.println("bistatic_interference_radar_esp(): detected WIFI_MODE_NULL: WIFI not configured: you should configure WIFI in advance and have a working connection before using the bistatic_interference_radar library");
     }
     return WIFI_MODEINVALID;
@@ -600,7 +608,7 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
 
   if (RSSIlevel == 0) {
 
-    if (debugMsg >= 4) {
+    if (debugRadarMsg >= 4) {
       Serial.println("bistatic_interference_radar_esp(): failed to get an RSSI with SCANMODE_STA: attempting to use other modes");
     }
     //if ((modeRes & WIFI_MODE_STA) && (!(modeRes & WIFI_MODE_APSTA))) { // STA only mode
@@ -609,31 +617,31 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
 
     if ((modeRes & WIFI_MODE_APSTA) || (modeRes & WIFI_MODE_AP)) { // also SoftAP available
       // we first check for any connected clients, then scan if zero clients have been found
-      if (debugMsg >= 4) {
+      if (debugRadarMsg >= 4) {
         Serial.println("bistatic_interference_radar_esp(): WIFI_MODE_AP or WIFI_MODE_APSTA detected: attempting to scan");
       }
-      if (debugMsg >= 6) {
+      if (debugRadarMsg >= 6) {
         Serial.print("bistatic_interference_radar_esp(): WIFI_MODE: ");
         Serial.print(modeRes);
         Serial.print(",  SCANMODE: ");
         Serial.println(scanMode);
       }
       if (scanMode == SCANMODE_SOFTAP) {
-        if (debugMsg >= 6) {
+        if (debugRadarMsg >= 6) {
           Serial.println("Calling bistatic_get_rssi_SoftAP_strongestClient()");
         }
         RSSIlevel = bistatic_get_rssi_SoftAP_strongestClient();
       }
 
       if (scanMode == SCANMODE_WIFIPROBE) {
-        if (debugMsg >= 6) {
+        if (debugRadarMsg >= 6) {
           Serial.println("Calling bistatic_get_rssi_ScanStrongestAP()");
         }
         RSSIlevel = bistatic_get_rssi_ScanStrongestAP();
       }
       
       if ((RSSIlevel == 0) && (scanMode == SCANMODE_SOFTAP)){ // SoftAP scan for connected clients failed, switching scan mode
-        if (debugMsg >= 6) {
+        if (debugRadarMsg >= 6) {
           Serial.println("scan failed: setting scanMode = SCANMODE_WIFIPROBE");
           Serial.println("Calling bistatic_get_rssi_ScanStrongestAP()");
         }
@@ -642,7 +650,7 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
       }
 
       if ((RSSIlevel == 0) && (scanMode == SCANMODE_WIFIPROBE)){ // WiFi probe scan for APs failed, switching scan mode
-        if (debugMsg >= 6) {
+        if (debugRadarMsg >= 6) {
           Serial.println("interim check level alpha: scan failed: setting scanMode = SCANMODE_SOFTAP");
           Serial.println("Calling bistatic_get_rssi_SoftAP_strongestClient()");
         }
@@ -652,11 +660,11 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
 
       
       if (RSSIlevel == 0) { // also no APs around to be scanned
-        if (debugMsg >= 6) {
+        if (debugRadarMsg >= 6) {
           Serial.println("interim check level beta: scan failed: setting scanMode = SCANMODE_SOFTAP");
         }
         scanMode == SCANMODE_SOFTAP; // it is still worth reverting to the most efficient scan mode.
-        if (debugMsg >= 1) {
+        if (debugRadarMsg >= 1) {
             Serial.println("bistatic_interference_radar_esp(): all available scan methods failed: radar inoperable due to lack of connected clients and/or nearby access points: bistatic radars need at least one available external transmitter to operate correctly");
         }
         //return RADAR_INOPERABLE; // radar inoperable
@@ -664,7 +672,7 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
     }
 
     if (modeRes & WIFI_MODE_STA) { // STA only mode
-      if (debugMsg >= 4) {
+      if (debugRadarMsg >= 4) {
         Serial.println("bistatic_interference_radar_esp(): STA-only wifi mode detected: attempting to use SCANMODE_WIFIPROBE");
       }
       scanMode = SCANMODE_WIFIPROBE;
@@ -672,7 +680,7 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
         RSSIlevel = bistatic_get_rssi_ScanStrongestAP();
       }      
       if (RSSIlevel == 0) {
-        if (debugMsg >= 1) {
+        if (debugRadarMsg >= 1) {
             Serial.println("bistatic_interference_radar_esp(): WIFI_MODE_STA: RSSI equal to zero detected even with SCANMODE_WIFIPROBE: the radar is inoperable");
         }
         //return RADAR_INOPERABLE; // radar inoperable
@@ -682,11 +690,11 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
 
 
     if (RSSIlevel == 0) { // also no APs around to be scanned
-        if (debugMsg >= 6) {
+        if (debugRadarMsg >= 6) {
           Serial.println("final check: scan failed: setting scanMode = SCANMODE_SOFTAP");
         }
         scanMode == SCANMODE_SOFTAP; // it is still worth reverting to the most efficient scan mode.
-        if (debugMsg >= 1) {
+        if (debugRadarMsg >= 1) {
             Serial.println("bistatic_interference_radar_esp(): all available scan methods failed: radar inoperable due to lack of connected clients and/or nearby access points: bistatic radars need at least one available external transmitter to operate correctly");
         }
         return RADAR_INOPERABLE; // radar inoperable
@@ -696,6 +704,12 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
   }
   
   res = bistatic_interference_radar_process(RSSIlevel); // the core operation won't change. 
+
+
+  if (enableCSVout) {
+    //Serial.println("VarianceLevel");
+    Serial.println(res);
+  }
   
   return res;
 
@@ -705,9 +719,9 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
 
 int bistatic_interference_radar_debug_via_serial(int debugLevel) {
 
- int debugSave = debugMsg;
- debugMsg = debugLevel;
- if (debugMsg >= 1) {
+ int debugSave = debugRadarMsg;
+ debugRadarMsg = debugLevel;
+ if (debugRadarMsg >= 1) {
   Serial.print("bistatic_interference_radar_debug_via_serial(): debugging functions (if the current wifi mode allows it):");
   Serial.println(bistatic_interference_radar_esp());
   int modeRes = (int) WiFi.getMode();
@@ -731,11 +745,81 @@ int bistatic_interference_radar_debug_via_serial(int debugLevel) {
   
  }
 
- debugMsg = debugSave; // restore the normal debug level
+ debugRadarMsg = debugSave; // restore the normal debug level
   
 }
 
 
 int bistatic_interference_radar_set_debug_level(int debugLevel) {
-  debugMsg = debugLevel;
+  debugRadarMsg = debugLevel;
+  return debugRadarMsg;
+}
+
+
+
+int bistatic_interference_radar_enable_serial_CSV_graph_data(int serialCSVen = 0) {
+
+  if (serialCSVen >= 0) {
+    enableCSVout = serialCSVen;
+  }
+  if (serialCSVen > 0) {
+    bistatic_interference_radar_set_debug_level(0);
+  }
+  
+  return serialCSVen;
+  
+}
+
+
+
+
+int bistatic_interference_radar_set_minimum_RSSI(int rssiMin) {
+
+  if ((rssiMin > 0) || (rssiMin < ABSOLUTE_RSSI_LIMIT)) {
+    rssiMin == ABSOLUTE_RSSI_LIMIT; // which results in disabling the minimum RSSI check
+  }
+
+  
+
+
+    if (debugRadarMsg >= 2) {
+      Serial.print("bistatic_interference_radar_set_minimum_RSSI(): minimumRSSI: ");
+      Serial.println(minimumRSSI);
+    }
+    minimumRSSI = rssiMin;
+    if (debugRadarMsg >= 1) {
+      Serial.print("bistatic_interference_radar_set_minimum_RSSI(): set minimumRSSI to: ");
+      Serial.println(minimumRSSI);
+    }
+
+  
+  return rssiMin;
+}
+
+
+// current status: IMPLEMENTED
+int bistatic_interference_radar_enable_alarm(int thresholdEnable) {
+  if (thresholdEnable < 0) {
+    thresholdEnable = 0; // which results in disabling the alarm
+  }
+
+  
+  enableThreshold = thresholdEnable; // Lol!
+  
+  return enableThreshold;
+  
+}
+
+
+// current status: IMPLEMENTED
+int bistatic_interference_radar_set_alarm_threshold(int alarmThreshold) {
+    if (alarmThreshold < 0) {
+    alarmThreshold = 0; // which results in always enabling the alarm
+  }
+
+  
+
+  varianceThreshold = alarmThreshold;
+  
+  return alarmThreshold;
 }

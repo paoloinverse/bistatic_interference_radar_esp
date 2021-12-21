@@ -9,6 +9,14 @@
 
 
 
+#define MINIMUM_RSSI -80  // in dBm   // minimum acceptable RSSI to consider a transmitter valid for processing (too low the RSSI, the results might become meaningless)
+
+#define ABSOLUTE_RSSI_LIMIT -128  // in dBm  // normaly you should never need to touch this value, it's already lower than the physical limits of most radios.
+
+
+
+
+
 int bistatic_interference_radar_init();  // initializes the storage arrays in internal RAM
 
 
@@ -20,9 +28,6 @@ int bistatic_interference_radar_deinit();  // deinitializes the storage arrays
 
 int bistatic_interference_radar_config(int, int, int, int, bool); // reconfigure the library with new parameters: sample buffer depth (how many samples to store in the circular buffer, mobile average filter size, variance threshold ( >= 0, how much the interference signal deviates from the norm before triggering a detection result, in dBm), variance integrator limit (how many variance samples we cumulate before evaluating the variance threshold level), finally bolean var set to true -> enable autoregressive filtering (default is false -> disable autoregressive filtering)
 
-
-//  bistatic_interference_radar_process(int sample); is the CORE function that does most of the processing. It receives an RSSI sample, processes and updates the data arrays and returns the detected movement signal.
-//  This function has no dependencies on any hardware or external libraries and can therefore be ported to other systems.
 
 int bistatic_interference_radar_process(int); // receives RSSI signal as parameter, returns the detection level ( < 0 -> error (see ERROR LEVELS section), == 0 -> no detection, > 0 -> detection level in dBm)
 
@@ -37,16 +42,36 @@ int bistatic_interference_radar(); // generic version, only works in STA mode; r
 int bistatic_interference_radar_esp(); // ESP32 specific version, uses the ESP API directly and also works in SoftAP mode; request the RSSI level internally, then process the signal and return the detection level in dBm
 
 
+
+
+// runtime configuration functions
+
+
 int bistatic_interference_radar_debug_via_serial(int);  // parameter is debug level, set it to at least >= 1; the highest the level, the more messages you enjoy
+
 
 int bistatic_interference_radar_set_debug_level(int);  // parameter is debug level, set it to at least >= 1; the highest the level, the more messages you enjoy
 
 
 
+// current status: IMPLEMENTED
+int bistatic_interference_radar_enable_serial_CSV_graph_data(int); // [ 0 = disabled, >=1 = enabled (default is 0) ] completely disable the verbose output and only print the variance over the serial console, so that any program listening to the serial can graph the relevant data. 
+
+
+// current status: IMPLEMENTED
+int bistatic_interference_radar_set_minimum_RSSI(int);
+
+// current status: IMPLEMENTED
+int bistatic_interference_radar_enable_alarm(int);
+
+
+// current status: IMPLEMENTED
+int bistatic_interference_radar_set_alarm_threshold(int);
 
 
 // ERROR LEVELS
 
+#define RADAR_RSSI_TOO_LOW -6
 #define WIFI_UNINITIALIZED -5
 #define WIFI_MODEINVALID -4
 #define RADAR_INOPERABLE -3
