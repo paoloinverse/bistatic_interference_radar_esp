@@ -19,6 +19,7 @@ Commented example plot follows:
 
 ![example_plot_01](https://user-images.githubusercontent.com/62485162/146927658-b540635e-16f6-4b56-b713-32469a1c8256.png)
 
+The plot is in arbitrary units derived from the received signal variance data, it is contructed by a relatively complex digital filter entirely built in inte
 
 Please note the code is mostly self-configuring and can autonomously take care of the common problems and failures typically encountered in a wifi based infrastructure, incuding faults affecting the nearby access points and stations, depending on the ESP32 operating mode. 
 
