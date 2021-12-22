@@ -7,6 +7,8 @@
 
 int enableCSVgraphOutput = 1; // 0 disable, 1 enable // if enabled, you may use Tools-> Serial Plotter to plot the variance output for each transmitter. 
 
+int scanInterval = 500; // in milliseconds
+
 // PLEASE NOTE: by default configuration, it takes 64 iterations to collect enough data to produce a meaningful output. PLEASE BE PATIENT AND WAIT about 32 seconds for that. 
 // While initializing, the output is tipically < 0 and meaningless. 
 
@@ -72,7 +74,7 @@ void setup()
     // reconfigure the library with new parameters: 
     // sample buffer depth (how many samples to store in the circular buffer),  = 64
     // mobile average filter size, = 16 
-    // variance threshold ( >= 0, how much the interference signal deviates from the norm before triggering a detection result, in dBm), = 3
+    // variance threshold ( >= 0, how much the interference signal deviates from the norm before triggering a detection result, in variance arbitrary units), = 3
     // variance integrator limit (how many variance samples we cumulate before evaluating the variance threshold level),  = 3
     // finally bolean var set to true -> enable autoregressive filtering (default is false -> disable autoregressive filtering)  = false
 
@@ -164,6 +166,9 @@ void manageSerialCommands() { // receives simple commands via serial port in the
         Serial.println("SERIAL FLUSH REQUESTED");
         Serial.flush();
       }
+      if (serCom == 'i') { // set the scan interval in milliseconds
+        scanInterval = serParVal;
+      }
     }
 
 }
@@ -172,7 +177,7 @@ void manageSerialCommands() { // receives simple commands via serial port in the
 
 void loop()
 {
-    delay(500);
+    delay(scanInterval);
 
     manageSerialCommands();
       

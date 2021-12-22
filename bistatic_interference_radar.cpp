@@ -54,7 +54,7 @@ int varianceAR = 0;  // autoregressive version
 int varianceIntegral = 0; 
 
 #define MAX_VARIANCE 65535
-int varianceThreshold = 3; // in dBm
+int varianceThreshold = 3; // in variance arbitrary units
 
 int varianceIntegratorLimitMax = MAX_SAMPLEBUFFERSIZE;
 
@@ -175,7 +175,7 @@ int bistatic_interference_radar_config(int sampleBufSize = 256, int mobileAvgSiz
 }
 
 
-int bistatic_interference_radar_process(int sample = 0) { // send the RSSI signal, returns the detection level ( < 0 -> error, == 0 -> no detection, > 0 -> detection level in dBm)
+int bistatic_interference_radar_process(int sample = 0) { // send the RSSI signal, returns the detection level ( < 0 -> error, == 0 -> no detection, > 0 -> detection level in variance arbitrary units)
 
 
   if ((sampleBuffer == NULL) || (mobileAverageBuffer == NULL) || (varianceBuffer == NULL)) {
@@ -245,7 +245,7 @@ int bistatic_interference_radar_process(int sample = 0) { // send the RSSI signa
       varianceBufferValid = 1; //please note we DO NOT need to have a fully validated buffer to work with the current M.A. data
     }
     // applying the autoregressive part
-    varianceAR = (varianceIntegral + varianceAR) / 2; // the effect of this filter is to "smooth" down the signal over time, so it's a simple IIR (infinite impulse response) low pass filter. It makes the system less sensitive to noisy signals, especially those with a variance of less than 1dBm.
+    varianceAR = (varianceIntegral + varianceAR) / 2; // the effect of this filter is to "smooth" down the signal over time, so it's a simple IIR (infinite impulse response) low pass filter. It makes the system less sensitive to noisy signals, especially those with a deviation of less than 1.
 
       // diagnostics section
     if (debugRadarMsg >= 2) {
@@ -312,7 +312,7 @@ int bistatic_interference_radar_process(int sample = 0) { // send the RSSI signa
 
 
 
-int bistatic_interference_radar() { // request the RSSI level internally, then process the signal and return the detection level in dBm
+int bistatic_interference_radar() { // request the RSSI level internally, then process the signal and return the detection level in variance arbitrary units
 
   int RSSIlevel = 0;
   int res = 0;
@@ -606,7 +606,7 @@ void serialPrintBSSID(uint8_t * localBSSID) {
 }
 
 
-int bistatic_interference_radar_esp() { // request the RSSI level internally, then process the signal and return the detection level in dBm, self-detects faults and seeks for alternate solutions
+int bistatic_interference_radar_esp() { // request the RSSI level internally, then process the signal and return the detection level in variance arbitrary units, self-detects faults and seeks for alternate solutions
 
   int RSSIlevel = 0;
   int res = 0;
