@@ -361,6 +361,7 @@ int strongestClientfound = 0; // if found set to 1
 
 int modeRes; // wifi mode reporting variable, initialized when radar operations are requested, and shared with other subfunctions
 
+uint8_t BSSIDinUse[6] = {0}; // this array identifies the currently used BSSID
 
 
 int bistatic_get_rssi_SoftAP_strongestClient() {
@@ -476,6 +477,9 @@ int bistatic_get_rssi_SoftAP_strongestClient() {
   }
   // returning the strongest signal
 
+  
+  memcpy ( BSSIDinUse, strongestClientBSSID, (sizeof(uint8_t) * 6)); // saving the current BSSID in use
+  
   return rssi;
 }
 
@@ -579,10 +583,26 @@ int bistatic_get_rssi_ScanStrongestAP() {
       scanMode = SCANMODE_SOFTAP; // let's change scan mode
     }
   }
+
+
+  memcpy ( BSSIDinUse, strongestBSSID, (sizeof(uint8_t) * 6)); // saving the current BSSID in use
   
   // returning the strongest signal
   WiFi.scanDelete();
+  
   return rssi;
+}
+
+
+void serialPrintBSSID(uint8_t * localBSSID) {
+  for (int bssidIndex = 0; bssidIndex < 6; bssidIndex++) {
+    if (localBSSID == NULL) {
+      Serial.print("NULL");
+      return;
+    }
+    
+    Serial.print(localBSSID[bssidIndex], HEX);
+  }
 }
 
 
@@ -708,6 +728,8 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
 
   if (enableCSVout) {
     //Serial.println("VarianceLevel");
+    serialPrintBSSID(BSSIDinUse);
+    Serial.println("");
     Serial.println(res);
   }
   
