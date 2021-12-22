@@ -729,7 +729,8 @@ int bistatic_interference_radar_esp() { // request the RSSI level internally, th
   if (enableCSVout) {
     //Serial.println("VarianceLevel");
     serialPrintBSSID(BSSIDinUse);
-    Serial.println("");
+    Serial.print("_");
+    Serial.println(RSSIlevel);
     Serial.println(res);
   }
   
