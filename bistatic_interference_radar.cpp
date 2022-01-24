@@ -102,6 +102,8 @@ int bistatic_interference_radar_init() {  // initializes the storage arrays in i
   variance = -1; // to make it clear that the initial value MUST be -1
 
 
+  return 1;
+
 }
 
 int bistatic_interference_radar_init_PSRAM() {  // initializes the storage arrays in PSRAM (only for ESP32-CAM modules and ESP32-WROVER modules with the onboard SPI RAM chip)
@@ -126,6 +128,8 @@ int bistatic_interference_radar_init_PSRAM() {  // initializes the storage array
   }
   variance = -1; // to make it clear that the initial value MUST be -1
 
+  return 1;
+
 }
 
 
@@ -142,6 +146,8 @@ int bistatic_interference_radar_deinit() {  // frees the storage arrays
   if (varianceBuffer != NULL) {
     free(varianceBuffer);
   }
+
+  return 1;
 
 }
 
@@ -171,6 +177,8 @@ int bistatic_interference_radar_config(int sampleBufSize = 256, int mobileAvgSiz
   varianceIntegratorLimit = varIntegratorLimit;
 
   enableAutoRegressive = enableAR;
+
+  return 1;
 
 }
 
@@ -769,7 +777,9 @@ int bistatic_interference_radar_debug_via_serial(int debugLevel) {
  }
 
  debugRadarMsg = debugSave; // restore the normal debug level
-  
+
+ return debugRadarMsg;
+ 
 }
 
 
