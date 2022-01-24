@@ -14,7 +14,7 @@
 #define ABSOLUTE_RSSI_LIMIT -128  // in dBm  // normaly you should never need to touch this value, it's already lower than the physical limits of most radios.
 
 
-
+#define RADAR_SCAN_INTERVAL 2000 // userland define
 
 
 int bistatic_interference_radar_init();  // initializes the storage arrays in internal RAM
